@@ -1,0 +1,9 @@
+Army knife
+
+스위스 군용 칼처럼 소소하지만 다양한 기능을 지원하는 web application이다.
+
+현재 구현되어 있는 기능
+
+1. sendmail
+useage: send GET request w/ <to>, <subject>, <body> arguments
+ex> army-knife.appspot.com/sendmail?to=<receiver mail>&subject=<subject>&body=<mail body>
