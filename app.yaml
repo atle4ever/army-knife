@@ -1,0 +1,11 @@
+application: army-knife
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /sendmail
+  script: sendmail.py
+
+- url: /.*
+  script: not_found.py
