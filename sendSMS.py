@@ -24,8 +24,8 @@ class MainPage(webapp.RequestHandler):
         event.title = atom.data.Title(text=text)
 
         start_time = time.strftime('%Y-%m-%dT%H:%M:%S.000Z', time.gmtime(time.time() + 180))
-
         event.when.append(gdata.calendar.data.When(start=start_time))
+
         event.when[0].reminder.append(gdata.data.Reminder(minutes='1'))
         
         new_event = client.InsertEvent(event)
