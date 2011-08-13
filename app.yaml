@@ -10,5 +10,8 @@ handlers:
 - url: /sendsms
   script: sendSMS.py
 
+- url: /toodledo
+  script: toodledo.py
+
 - url: /.*
   script: not_found.py
