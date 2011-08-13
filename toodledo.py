@@ -5,6 +5,8 @@ from google.appengine.ext import db
 
 import httplib, urllib
 import json
+import logging
+
 from datetime import datetime, timedelta
 
 class Token(db.Model):
@@ -37,8 +39,10 @@ class MainPage(webapp.RequestHandler):
                 token = Token()
                 token.token = json_['token']
                 token.put()
+                logging.info("Get new token - Token: " + token.token + " TS: " + str(token.timeStamp))
         else:
             token = tokens[0]
+            logging.info("Retrieve stored token - Token: " + token.token + " TS: " + str(token.timeStamp))
 
         print token.token
         print token.timeStamp
