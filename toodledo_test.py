@@ -1,6 +1,7 @@
 import urllib, urllib2
 import md5
 import json
+from datetime import datetime, timedelta 
 
 mPasswd = '9fed0b251f717554a6d5c7e27dbba4b0'
 appId = 'maildelivery'
@@ -40,14 +41,22 @@ m.update(appToken)
 m.update(sessionToken)
 key = m.hexdigest()
 
-args = urllib.urlencode({'key' : key, 'fields': 'duedate,duetime'})
+args = urllib.urlencode({'key' : key, 'fields': 'startdate,duedate'})
 res = urllib2.urlopen(url='http://api.toodledo.com/2/tasks/get.php',
         data=args)
 json_ = json.loads(res.read())
 
 num = json_.pop(0)['total']
 
+def getDateStr(ts):
+    dt = datetime.fromtimestamp(ts) - timedelta(hours=9)
+    return dt.strftime('%Y-%m-%d')
+
+print datetime.now()
+
 for j in json_:
     if j['completed'] == 0:
         print j['title']
         print j
+        print getDateStr(j['startdate'])
+        print getDateStr(j['duedate'])
