@@ -1,20 +1,23 @@
-from google.appengine.api import mail
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
+
+from sendmail_util import sendmail
 
 class MainPage(webapp.RequestHandler):
     def get(self):
         to = self.request.get("to");
         subject = self.request.get("subject");
         body = self.request.get("body");
+        html= self.request.get("html");
 
         self.response.headers['Content-Type'] = 'text/plain'
 
-        if to == "" or subject == "" or body == "" :
-            self.response.out.write('[Error] Please pass <to>, <subject>, <body> as arguments')
+        if to == "" or subject == "" or (body == "" and html == ""):
+            self.response.out.write('[Error] Please pass <to>, <subject>, [<body>|<html>] as arguments')
             return
 
-        mail.send_mail(sender="atle4ever@gmail.com", to=to, subject=subject, body=body);
+        sendmail(to, subject, body, html)
+
         self.response.out.write('Mail is sent')
 
 
