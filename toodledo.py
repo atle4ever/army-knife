@@ -41,9 +41,9 @@ class MainPage(webapp.RequestHandler):
         # Get session token
         session = db.GqlQuery("SELECT *"
                 "FROM Session "
-                "WHERE timeStamp < :1 "
+                "WHERE timeStamp > :1 "
                 "ORDER BY timeStamp DESC LIMIT 1",
-                datetime.now() + timedelta(hours=4))
+                datetime.now() - timedelta(hours=4))
 
         if session.count() == 0:
             m = md5.new()
