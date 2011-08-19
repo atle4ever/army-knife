@@ -3,11 +3,13 @@ import md5
 import json
 from datetime import datetime, timedelta 
 
+from toodledo_util import strOfDate
+
 mPasswd = '9fed0b251f717554a6d5c7e27dbba4b0'
 appId = 'maildelivery'
 appToken = 'api4e45dc2f22799'
 userId = 'td4af1291294b0a'
-sessionToken = 'td4e48c678f317b'
+sessionToken = 'td4e4e6e19c3c9a'
 
 # Get user id
 #m = md5.new()
@@ -41,6 +43,7 @@ m.update(appToken)
 m.update(sessionToken)
 key = m.hexdigest()
 
+# Get tasks
 args = urllib.urlencode({'key' : key, 'fields': 'startdate,duedate'})
 res = urllib2.urlopen(url='http://api.toodledo.com/2/tasks/get.php',
         data=args)
@@ -48,15 +51,37 @@ json_ = json.loads(res.read())
 
 num = json_.pop(0)['total']
 
-def getDateStr(ts):
-    dt = datetime.fromtimestamp(ts) - timedelta(hours=9)
-    return dt.strftime('%Y-%m-%d')
+# date
+dueBoundary = datetime.now() + timedelta(days=7)
+dueBoundary = dueBoundary.strftime('%Y-%m-%d')
+today = datetime.now().strftime('%Y-%m-%d')
 
-print datetime.now()
+taskMap = {}
 
 for j in json_:
     if j['completed'] == 0:
-        print j['title']
-        print j
-        print getDateStr(j['startdate'])
-        print getDateStr(j['duedate'])
+        title = j['title']
+        duedate = strOfDate(j['duedate'])
+
+        if duedate > dueBoundary :
+            startdate = j['startdate']
+            if startdate == 0:
+                continue # due-date > today + 7 && no start-date
+
+            startdate = strOfDate(startdate)
+            if startdate > today :
+                continue # due-date > today + 7 && start-date > today
+
+        if duedate in taskMap:
+            taskMap[duedate].append(title)
+        else:
+            taskMap[duedate] = [title]
+
+
+taskList = taskMap.items()
+taskList.sort()
+
+for due, tasks in taskList :
+    print due
+    for t in tasks :
+        print t
