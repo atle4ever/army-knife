@@ -1,0 +1,12 @@
+<html>
+    <body>
+        {% for item in taskList %}
+            {{ item.0 }} <br />
+            {% for t in item.1 %}
+                {{ t.0 }}, {{ t.1 }} <br />
+            {% endfor %}
+            <br />
+            <br />
+        {% endfor %}
+    </body>
+</html>

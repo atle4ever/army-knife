@@ -1,7 +1,9 @@
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext import db
 
+import os
 import urllib, urllib2
 import md5
 import json
@@ -22,7 +24,7 @@ class Session(db.Model):
 
 class MainPage(webapp.RequestHandler):
     def get(self):
-        self.response.headers['Content-Type'] = 'text/plain'
+        self.response.headers['Content-Type'] = 'text/html'
 
         # Get user id
         #m = md5.new()
@@ -99,19 +101,30 @@ class MainPage(webapp.RequestHandler):
                     startdate = strOfDate(startdate)
                     if startdate > today :
                         continue # due-date > today + 7 && start-date > today
-        
+
+                    taskType = 'startdate'
+
+                elif duedate == today :
+                    taskType = 'today'
+
+                elif duedate < today :
+                    taskType = 'overdue'
+
+                else :
+                    taskType = 'normal'
+                    
                 if duedate in taskMap:
-                    taskMap[duedate].append(title)
+                    taskMap[duedate].append([title, taskType])
                 else:
-                    taskMap[duedate] = [title]
-        
+                    taskMap[duedate] = [[title, taskType]]
         
         taskList = taskMap.items()
         taskList.sort()
+
+        template_values = { 'taskList' : taskList }
+        path = os.path.join(os.path.dirname(__file__), 'toodledo_template.html')
+        self.response.out.write(template.render(path, template_values))
         
-        for due, tasks in taskList :
-            print due
-            print tasks
 
 application = webapp.WSGIApplication([('/toodledo', MainPage)], debug=True);
 
