@@ -1,15 +1,22 @@
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
-
 from google.appengine.ext import db
 
-import httplib, urllib
+import urllib, urllib2
+import md5
 import json
 import logging
-
 from datetime import datetime, timedelta
 
-class Token(db.Model):
+from toodledo_util import strOfDate
+
+mPasswd = '9fed0b251f717554a6d5c7e27dbba4b0'
+appId = 'maildelivery'
+appToken = 'api4e45dc2f22799'
+userId = 'td4af1291294b0a'
+sessionToken = 'td4e4e6e19c3c9a'
+
+class Session(db.Model):
     token = db.StringProperty()
     timeStamp = db.DateTimeProperty(auto_now_add=True)
 
@@ -17,36 +24,94 @@ class MainPage(webapp.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'text/plain'
 
+        # Get user id
+        #m = md5.new()
+        #m.update(email)
+        #m.update(appToken)
+        #sig = m.hexdigest()
+        #args = urllib.urlencode({'appid' : appId, 'email' : email, 'pass' : passwd, 'sig' : sig})
+        #res = urllib2.urlopen(url='http://api.toodledo.com/2/account/lookup.php', 
+        #        data=args)
+        #
+        #json_ = json.loads(res.read())
+        #userId = json_['userid']
+
         # Get session token
-        tokens = db.GqlQuery("SELECT *"
-                "FROM Token "
+        session = db.GqlQuery("SELECT *"
+                "FROM Session "
                 "WHERE timeStamp < :1 "
                 "ORDER BY timeStamp DESC LIMIT 1",
                 datetime.now() + timedelta(hours=4))
 
-        if tokens.count() == 0:
-            httpConn= httplib.HTTPConnection("api.toodledo.com", 80)
-            httpConn.connect()
+        if session.count() == 0:
+            m = md5.new()
+            m.update(userId)
+            m.update(appToken)
+            sig = m.hexdigest()
+            args = urllib.urlencode({'userid' : userId, 'appid' : appId, 'sig' : sig})
+            res = urllib2.urlopen(url='http://api.toodledo.com/2/account/token.php',
+                    data=args)
 
-            args = urllib.urlencode({'userid' : 'td4af1291294b0a', 'appid' : 'maildelivery', 'sig' : '7908c91935f48cc80635f168a8d7f592'})
-            httpConn.request('POST', '/2/account/token.php', args)
+            json_ = json.loads(res.read())
+            sessionToken = json_['token']
 
-            httpRes = httpConn.getresponse()
-            if httpRes.status == httplib.OK:
-                text = httpRes.read()
-                json_ = json.loads(text)
-                
-                token = Token()
-                token.token = json_['token']
-                token.put()
-                logging.info("Get new token - Token: " + token.token + " TS: " + str(token.timeStamp))
+            session = Session()
+            session.token = sessionToken
+            session.put()
+            logging.info("Get new token - Token: " + session.token + " TS: " + str(session.timeStamp))
+
         else:
-            token = tokens[0]
-            logging.info("Retrieve stored token - Token: " + token.token + " TS: " + str(token.timeStamp))
+            sessionToken = session[0].token
+            logging.info("Retrieve stored token - Token: " + session[0].token + " TS: " + str(session[0].timeStamp))
 
-        print token.token
-        print token.timeStamp
-        print datetime.now()
+        # Generating key
+        m = md5.new()
+        m.update(mPasswd)
+        m.update(appToken)
+        m.update(sessionToken)
+        key = m.hexdigest()
+        
+        # Get tasks
+        args = urllib.urlencode({'key' : key, 'fields': 'startdate,duedate'})
+        res = urllib2.urlopen(url='http://api.toodledo.com/2/tasks/get.php',
+                data=args)
+        json_ = json.loads(res.read())
+        
+        num = json_.pop(0)['total']
+        
+        # date
+        dueBoundary = datetime.now() + timedelta(days=7)
+        dueBoundary = dueBoundary.strftime('%Y-%m-%d')
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        taskMap = {}
+        
+        for j in json_:
+            if j['completed'] == 0:
+                title = j['title']
+                duedate = strOfDate(j['duedate'])
+        
+                if duedate > dueBoundary :
+                    startdate = j['startdate']
+                    if startdate == 0:
+                        continue # due-date > today + 7 && no start-date
+        
+                    startdate = strOfDate(startdate)
+                    if startdate > today :
+                        continue # due-date > today + 7 && start-date > today
+        
+                if duedate in taskMap:
+                    taskMap[duedate].append(title)
+                else:
+                    taskMap[duedate] = [title]
+        
+        
+        taskList = taskMap.items()
+        taskList.sort()
+        
+        for due, tasks in taskList :
+            print due
+            print tasks
 
 application = webapp.WSGIApplication([('/toodledo', MainPage)], debug=True);
 
